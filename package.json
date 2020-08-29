@@ -1,6 +1,6 @@
 {
   "name": "electrum-http",
-  "version": "1.5.2",
+  "version": "1.6.0",
   "description": "Service that takes http requests asks specific electrum server in socket and returns electrums response",
   "main": "index.js",
   "scripts": {

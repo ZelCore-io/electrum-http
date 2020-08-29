@@ -257,7 +257,7 @@ app.use(function (req, res, next) {
           for (let j = 0; j < limit; j += 1) {
             const txHeight = ver[j].height;
             const rawtx = responseB[j].hex;
-            const tx = bitgotx.Transaction.fromHex(rawtx);
+            const tx = bitgotx.Transaction.fromHex(rawtx, network);
             const result = {
               txid: responseB[j].txid,
               version: responseB[j].version,
@@ -296,7 +296,7 @@ app.use(function (req, res, next) {
                     .then((responseInput) => {
                       const inputRes = responseInput;
                       // console.log(inputRes)
-                      const vintx = bitgotx.Transaction.fromHex(inputRes);
+                      const vintx = bitgotx.Transaction.fromHex(inputRes, network);
                       const vinOutTx = vintx.outs[myvin.n];
                       myvin.valueSat = vinOutTx.value;
                       myvin.satoshis = vinOutTx.value;
