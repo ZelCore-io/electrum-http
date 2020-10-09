@@ -313,14 +313,18 @@ app.use(function (req, res, next) {
                           );
                           break;
                         case "pubkey":
-                          pubKeyBuffer = Buffer.from(
-                            myvin.scriptPubKey.asm.split(" ")[0],
-                            "hex",
-                          );
-                          myvin.addr = bitgotx.ECPair.fromPublicKeyBuffer(
-                            pubKeyBuffer,
-                            network,
-                          ).getAddress();
+                          try {
+                            pubKeyBuffer = Buffer.from(
+                              myvin.scriptSig.asm.split(" ")[0],
+                              "hex",
+                            );
+                            myvin.addr = bitgotx.ECPair.fromPublicKeyBuffer(
+                              pubKeyBuffer,
+                              network,
+                            ).getAddress();
+                          } catch (error) {
+                            console.log(error);
+                          }
                           break;
                         case "scripthash":
                           myvin.addr = bitgotx.address.fromOutputScript(
