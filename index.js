@@ -1,19 +1,20 @@
-const ElectrumCli = require("electrum-client");
-const qs = require("qs");
-const Ddos = require("ddos");
+const ElectrumCli = require('electrum-client');
+const qs = require('qs');
+const Ddos = require('ddos');
 const bitgotx = require('bitgo-utxo-lib');
+
 const ddos = new Ddos({ burst: 25, limit: 100 });
-const express = require("express");
+const express = require('express');
+
 const app = express();
 app.use(ddos.express);
 
-let conTypeDefault = "tls";  // tcp or tls
-let conPortDefault = 50002;
-let coinDefault = 'bitcoin';
+const conTypeDefault = 'tls'; // tcp or tls
+const conPortDefault = 50002;
+const coinDefault = 'bitcoin';
 const listeningPort = 3456;
 
-app.use(function (req, res, next) {
-
+app.use((req, res, next) => {
   // Set CORS headers
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Request-Method', '*');
@@ -21,42 +22,42 @@ app.use(function (req, res, next) {
   res.setHeader('Access-Control-Allow-Headers', '*');
 
   let decMyCP = decodeURIComponent(req.url);
-  decMyCP = decMyCP.split("/?")[1];
+  decMyCP = decMyCP.split('/?')[1];
   const parsed = qs.parse(decMyCP);
 
-  let call = parsed.call;
-  let param = parsed.param;
-  let server = parsed.server;
+  let { call } = parsed;
+  let { param } = parsed;
+  let { server } = parsed;
   const conPort = parsed.port || conPortDefault;
   const conType = parsed.contype || conTypeDefault;
   const coin = parsed.coin || coinDefault;
 
   // support backwards compatibility
   if (call == undefined || server == undefined) {
-    var x = req.url.split("?param=");
-    param = x[1]
-    var y = x[0].split("?call=")
-    call = y[1]
-    var z = y[0].split("?server=")
-    server = z[1]
+    var x = req.url.split('?param=');
+    param = x[1];
+    var y = x[0].split('?call=');
+    call = y[1];
+    const z = y[0].split('?server=');
+    server = z[1];
   }
 
   // support mobile mistake where it was ?param
   if (call !== 'height' && call !== undefined && param === undefined) {
-    var x = req.url.split("?param=");
-    param = x[1]
-    var y = x[0].split("&call=")
-    call = y[1]
+    var x = req.url.split('?param=');
+    param = x[1];
+    var y = x[0].split('&call=');
+    call = y[1];
   }
 
   if (call == undefined) {
-    res.write("Error: Call is undefined");
+    res.write('Error: Call is undefined');
     res.end();
     return;
   }
 
   if (server == undefined) {
-    res.write("Error: Server is undefined");
+    res.write('Error: Server is undefined');
     res.end();
     return;
   }
@@ -66,75 +67,74 @@ app.use(function (req, res, next) {
     try {
       network = bitgotx.networks[coin];
     } catch (e) {
-      console.log(e)
-      res.write("Error: Invalid coin network specified");
+      console.log(e);
+      res.write('Error: Invalid coin network specified');
       res.end();
       return;
     }
   }
 
-  var eclCall = "";
+  let eclCall = '';
   switch (call) {
     case 'balance':
-      eclCall = 'blockchainScripthash_getBalance'
-      oneparam()
+      eclCall = 'blockchainScripthash_getBalance';
+      oneparam();
       break;
     case 'history':
-      eclCall = 'blockchainScripthash_getHistory'
-      oneparam(true)
+      eclCall = 'blockchainScripthash_getHistory';
+      oneparam(true);
       break;
     case 'entirehistory':
-      eclCall = 'blockchainScripthash_getHistory'
-      oneparam(false)
+      eclCall = 'blockchainScripthash_getHistory';
+      oneparam(false);
       break;
     case 'transaction':
-      eclCall = 'blockchainTransaction_get'
-      oneparam()
+      eclCall = 'blockchainTransaction_get';
+      oneparam();
       break;
     case 'transactionnonverbose':
-      eclCall = 'blockchainTransaction_get_nonverbose'
-      oneparam()
+      eclCall = 'blockchainTransaction_get_nonverbose';
+      oneparam();
       break;
     case 'transactionverbose':
-      eclCall = 'blockchainTransaction_get_verbose'
-      oneparam()
+      eclCall = 'blockchainTransaction_get_verbose';
+      oneparam();
       break;
     case 'utxo':
-      eclCall = 'blockchainScripthash_listunspent'
-      oneparam()
+      eclCall = 'blockchainScripthash_listunspent';
+      oneparam();
       break;
     case 'broadcast':
-      eclCall = 'blockchainTransaction_broadcast'
-      oneparam()
+      eclCall = 'blockchainTransaction_broadcast';
+      oneparam();
       break;
     case 'height':
-      eclCall = 'blockchainHeaders_subscribe'
-      zeroparam()
+      eclCall = 'blockchainHeaders_subscribe';
+      zeroparam();
       break;
     case 'header':
-      eclCall = 'blockchainBlock_getHeader'
-      oneparam()
+      eclCall = 'blockchainBlock_getHeader';
+      oneparam();
       break;
     case 'nicehistory':
-      nicehistory(30)
+      nicehistory(1);
       break;
     case 'niceentirehistory':
-      nicehistory(30000)
+      nicehistory(30000);
       break;
     case 'niceutxo':
-      niceutxo()
+      niceutxo();
       break;
   }
 
   function oneparam(limitHistory) {
-    var main = async () => {
-      var ecl = new ElectrumCli(conPort, server, conType);
+    const main = async () => {
+      const ecl = new ElectrumCli(conPort, server, conType);
       await ecl.connect()
-        .catch(function (error) {
-          console.log(error)
-          res.write(JSON.stringify(error))
-          res.end()
-          return;
+        .catch((error) => {
+          console.log(error);
+          res.write(JSON.stringify(error));
+          res.end();
         }); // connect(promise)
       try {
         if (call === 'balance' || call === 'history' || call === 'entirehistory' || call === 'utxo') {
@@ -142,98 +142,96 @@ app.use(function (req, res, next) {
             param,
             network,
           );
-          const scriptHash = bitgotx.crypto.sha256(paramBuffer).reverse().toString("hex");
+          const scriptHash = bitgotx.crypto.sha256(paramBuffer).reverse().toString('hex');
           console.log(scriptHash);
           param = scriptHash;
-          console.log(bitgotx.address.fromOutputScript(paramBuffer, network))
+          console.log(bitgotx.address.fromOutputScript(paramBuffer, network));
         }
-        var ver = await ecl[eclCall](
-          param
+        const ver = await ecl[eclCall](
+          param,
         ); // json-rpc(promise)
         // console.log(ver)
-        if (eclCall === "blockchainScripthash_listunspent") {
+        if (eclCall === 'blockchainScripthash_listunspent') {
           ecl.close();
           const slicedArray = ver.slice(0, 600);
-          const verString = JSON.stringify(slicedArray)
-          res.write(verString)
-          res.end()
-        } else if (eclCall === "blockchainScripthash_getHistory" && limitHistory) {
+          const verString = JSON.stringify(slicedArray);
+          res.write(verString);
+          res.end();
+        } else if (eclCall === 'blockchainScripthash_getHistory' && limitHistory) {
           if (ver.length > 200) {
             ecl.close();
-            const length = ver.length
+            const { length } = ver;
             const slicedArray = ver.slice(length - 100, length);
-            const verString = JSON.stringify(slicedArray)
-            res.write(verString)
-            res.end()
+            const verString = JSON.stringify(slicedArray);
+            res.write(verString);
+            res.end();
           } else {
             ecl.close();
-            var verString = JSON.stringify(ver)
-            res.write(verString)
-            res.end()
+            var verString = JSON.stringify(ver);
+            res.write(verString);
+            res.end();
           }
         } else {
           ecl.close();
-          var verString = JSON.stringify(ver)
-          res.write(verString)
-          res.end()
+          var verString = JSON.stringify(ver);
+          res.write(verString);
+          res.end();
         }
       } catch (e) {
         ecl.close();
-        res.write("Error: " + e.message)
-        res.end()
+        res.write(`Error: ${e.message}`);
+        res.end();
       }
     };
-    main()
+    main();
   }
 
   function zeroparam() {
-    var main = async () => {
-      var ecl = new ElectrumCli(conPort, server, conType);
+    const main = async () => {
+      const ecl = new ElectrumCli(conPort, server, conType);
       await ecl.connect()
-        .catch(function (error) {
-          console.log(error)
-          res.write(JSON.stringify(error))
-          res.end()
-          return;
+        .catch((error) => {
+          console.log(error);
+          res.write(JSON.stringify(error));
+          res.end();
         }); // connect(promise)
       try {
-        var ver = await ecl[eclCall](
+        const ver = await ecl[eclCall](
         ); // json-rpc(promise)
         // console.log(ver)
         ecl.close();
-        var verString = JSON.stringify(ver)
-        res.write(verString)
-        res.end()
+        const verString = JSON.stringify(ver);
+        res.write(verString);
+        res.end();
       } catch (e) {
         ecl.close();
-        console.log(e)
-        res.write("Error: " + e.message)
-        res.end()
+        console.log(e);
+        res.write(`Error: ${e.message}`);
+        res.end();
       }
     };
-    main()
+    main();
   }
 
   async function nicehistory(amountoftxs) {
-    let address = param;
+    const address = param;
     console.log(address);
-    var ecl = new ElectrumCli(conPort, server, conType);
+    const ecl = new ElectrumCli(conPort, server, conType);
     await ecl.connect()
-      .catch(function (error) {
-        console.log(error)
-        res.write(JSON.stringify(error))
-        res.end()
-        return;
+      .catch((error) => {
+        console.log(error);
+        res.write(JSON.stringify(error));
+        res.end();
       }); // connect(promise)
     try {
       const paramBuffer = bitgotx.address.toOutputScript(
         address,
         network,
       );
-      const scriptHash = bitgotx.crypto.sha256(paramBuffer).reverse().toString("hex");
+      const scriptHash = bitgotx.crypto.sha256(paramBuffer).reverse().toString('hex');
 
-      var response = await ecl["blockchainScripthash_getHistory"](
-        scriptHash
+      const response = await ecl.blockchainScripthash_getHistory(
+        scriptHash,
       );
       // console.log(response);
       const myarray = response;
@@ -251,7 +249,7 @@ app.use(function (req, res, next) {
       for (let i = 0; i < limit; i += 1) {
         txUrls.push(ver[i].tx_hash);
       }
-      const txsPromise = txUrls.map(l => ecl["blockchainTransaction_get_verbose"](l));
+      const txsPromise = txUrls.map((l) => ecl.blockchainTransaction_get_verbose(l));
       Promise.all(txsPromise, { timeout: 30000 })
         .then((responseB) => {
           for (let j = 0; j < limit; j += 1) {
@@ -278,21 +276,21 @@ app.use(function (req, res, next) {
                 const myvin = {
                   txid: !input.hash.reverse
                     ? input.hash
-                    : input.hash.reverse().toString("hex"),
+                    : input.hash.reverse().toString('hex'),
                   n: input.index,
                   script: bitgotx.script.toASM(input.script),
                   sequence: input.sequence,
                   scriptSig: {
-                    hex: input.script.toString("hex"),
+                    hex: input.script.toString('hex'),
                     asm: bitgotx.script.toASM(input.script),
                   },
-                  addr: "",
+                  addr: '',
                   value: 0,
                   valueSat: 0,
                   satoshis: 0,
                 };
-                if (!myvin.txid.includes("00000000000000000000000000000")) {
-                  ecl["blockchainTransaction_get_nonverbose"](myvin.txid)
+                if (!myvin.txid.includes('00000000000000000000000000000')) {
+                  ecl.blockchainTransaction_get_nonverbose(myvin.txid)
                     .then((responseInput) => {
                       const inputRes = responseInput;
                       // console.log(inputRes)
@@ -306,17 +304,17 @@ app.use(function (req, res, next) {
                       const type = bitgotx.script.classifyOutput(vinOutTx.script);
                       let pubKeyBuffer;
                       switch (type) {
-                        case "pubkeyhash":
+                        case 'pubkeyhash':
                           myvin.addr = bitgotx.address.fromOutputScript(
                             vinOutTx.script,
                             network,
                           );
                           break;
-                        case "pubkey":
+                        case 'pubkey':
                           try {
                             pubKeyBuffer = Buffer.from(
-                              myvin.scriptSig.asm.split(" ")[0],
-                              "hex",
+                              myvin.scriptSig.asm.split(' ')[0],
+                              'hex',
                             );
                             myvin.addr = bitgotx.ECPair.fromPublicKeyBuffer(
                               pubKeyBuffer,
@@ -326,7 +324,7 @@ app.use(function (req, res, next) {
                             console.log(error);
                           }
                           break;
-                        case "scripthash":
+                        case 'scripthash':
                           myvin.addr = bitgotx.address.fromOutputScript(
                             vinOutTx.script,
                             network,
@@ -340,15 +338,15 @@ app.use(function (req, res, next) {
                       if (index === array.length - 1) resolve();
                     })
                     .catch((e) => {
-                      console.log(e)
+                      console.log(e);
                       ecl.close();
-                      res.write("Error: " + e.message)
-                      res.end()
+                      res.write(`Error: ${e.message}`);
+                      res.end();
                     });
                 } else if (index === array.length - 1) {
                   setTimeout(() => {
                     resolve();
-                  }, 888)
+                  }, 888);
                 }
               });
             });
@@ -359,8 +357,8 @@ app.use(function (req, res, next) {
                 vout.valueSat = vout.value * 1e8;
                 result.valueOutSat += (vout.value * 1e8);
                 result.fees -= (vout.value * 1e8);
-                result.vout.push(vout)
-              })
+                result.vout.push(vout);
+              });
               lightTransactions.push(result);
               if (lightTransactions.length === limit) {
                 ecl.close();
@@ -373,39 +371,38 @@ app.use(function (req, res, next) {
         .catch((e) => {
           ecl.close();
           console.log(e);
-          res.write("Error: " + e.message);
+          res.write(`Error: ${e.message}`);
           res.end();
         });
     } catch (e) {
       ecl.close();
-      res.write("Error: " + e.message)
-      res.end()
+      res.write(`Error: ${e.message}`);
+      res.end();
     }
   }
 
   async function niceutxo() {
-    let address = param;
+    const address = param;
     console.log(address);
-    var ecl = new ElectrumCli(conPort, server, conType);
+    const ecl = new ElectrumCli(conPort, server, conType);
     await ecl.connect()
-      .catch(function (error) {
-        console.log(error)
-        res.write(JSON.stringify(error))
-        res.end()
-        return;
+      .catch((error) => {
+        console.log(error);
+        res.write(JSON.stringify(error));
+        res.end();
       }); // connect(promise)
     try {
       const paramBuffer = bitgotx.address.toOutputScript(
         param,
         network,
       );
-      const scriptHash = bitgotx.crypto.sha256(paramBuffer).reverse().toString("hex");
+      const scriptHash = bitgotx.crypto.sha256(paramBuffer).reverse().toString('hex');
       const scriptPubKey = bitgotx.address.toOutputScript(
         address,
         network,
-      ).toString("hex");
-      var ver = await ecl["blockchainScripthash_listunspent"](
-        scriptHash
+      ).toString('hex');
+      const ver = await ecl.blockchainScripthash_listunspent(
+        scriptHash,
       );
       ecl.close();
       const utxos = ver.slice(0, 600);
@@ -425,16 +422,16 @@ app.use(function (req, res, next) {
       res.end();
     } catch (e) {
       ecl.close();
-      res.write("Error: " + e.message)
-      res.end()
+      res.write(`Error: ${e.message}`);
+      res.end();
     }
   }
 });
 
-app.listen(listeningPort, function () {
-  console.log('App listening on ' + listeningPort);
+app.listen(listeningPort, () => {
+  console.log(`App listening on ${listeningPort}`);
 });
 
-process.on('uncaughtException', function (exception) {
-  console.log(exception)
+process.on('uncaughtException', (exception) => {
+  console.log(exception);
 });
