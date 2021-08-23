@@ -415,7 +415,7 @@ app.use((req, res) => {
       oneparam();
       break;
     case 'nicehistory':
-      nicehistory(1);
+      nicehistory(30);
       break;
     case 'niceentirehistory':
       nicehistory(30000);
