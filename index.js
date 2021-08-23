@@ -192,6 +192,7 @@ app.use((req, res) => {
       for (let i = 0; i < limit; i += 1) {
         txUrls.push(ver[i].tx_hash);
       }
+      // console.log(txUrls);
       const txsPromise = txUrls.map((l) => ecl.blockchainTransaction_get_verbose(l));
       Promise.all(txsPromise, { timeout: 30000 })
         .then((responseB) => {
@@ -212,7 +213,7 @@ app.use((req, res) => {
               fees: 0,
               height: txHeight,
             };
-            // console.log(tx)
+            // console.log(tx);
             // console.log(result);
             const insFetching = new Promise((resolve) => {
               tx.ins.forEach((input, index, array) => {
@@ -235,8 +236,17 @@ app.use((req, res) => {
                 if (!myvin.txid.includes('00000000000000000000000000000')) {
                   ecl.blockchainTransaction_get_nonverbose(myvin.txid)
                     .then((responseInput) => {
+                      if (coin === 'raptoreum' && responseInput.includes('03000500010000000000000000000000000000000000000000000000000000000000000000ff')) {
+                        if (index === array.length - 1) {
+                          setTimeout(() => {
+                            resolve();
+                          }, 888);
+                        }
+                        return;
+                      }
                       const inputRes = responseInput;
-                      // console.log(inputRes)
+                      // console.log(myvin.txid);
+                      // console.log(inputRes);
                       const vintx = bitgotx.Transaction.fromHex(inputRes, network);
                       const vinOutTx = vintx.outs[myvin.n];
                       myvin.valueSat = vinOutTx.value;
