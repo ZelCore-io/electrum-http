@@ -14,7 +14,7 @@ const conPortDefault = 50002;
 const coinDefault = 'bitcoin';
 const listeningPort = 3456;
 
-app.use((req, res, next) => {
+app.use((req, res) => {
   // Set CORS headers
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Request-Method', '*');
@@ -33,10 +33,13 @@ app.use((req, res, next) => {
   const coin = parsed.coin || coinDefault;
 
   // support backwards compatibility
-  if (call == undefined || server == undefined) {
-    var x = req.url.split('?param=');
+  let x;
+  let y;
+  let eclCall = '';
+  if (!call || !server) {
+    x = req.url.split('?param=');
     param = x[1];
-    var y = x[0].split('?call=');
+    y = x[0].split('?call=');
     call = y[1];
     const z = y[0].split('?server=');
     server = z[1];
@@ -44,19 +47,19 @@ app.use((req, res, next) => {
 
   // support mobile mistake where it was ?param
   if (call !== 'height' && call !== undefined && param === undefined) {
-    var x = req.url.split('?param=');
+    x = req.url.split('?param=');
     param = x[1];
-    var y = x[0].split('&call=');
+    y = x[0].split('&call=');
     call = y[1];
   }
 
-  if (call == undefined) {
+  if (!call) {
     res.write('Error: Call is undefined');
     res.end();
     return;
   }
 
-  if (server == undefined) {
+  if (!server) {
     res.write('Error: Server is undefined');
     res.end();
     return;
@@ -72,59 +75,6 @@ app.use((req, res, next) => {
       res.end();
       return;
     }
-  }
-
-  let eclCall = '';
-  switch (call) {
-    case 'balance':
-      eclCall = 'blockchainScripthash_getBalance';
-      oneparam();
-      break;
-    case 'history':
-      eclCall = 'blockchainScripthash_getHistory';
-      oneparam(true);
-      break;
-    case 'entirehistory':
-      eclCall = 'blockchainScripthash_getHistory';
-      oneparam(false);
-      break;
-    case 'transaction':
-      eclCall = 'blockchainTransaction_get';
-      oneparam();
-      break;
-    case 'transactionnonverbose':
-      eclCall = 'blockchainTransaction_get_nonverbose';
-      oneparam();
-      break;
-    case 'transactionverbose':
-      eclCall = 'blockchainTransaction_get_verbose';
-      oneparam();
-      break;
-    case 'utxo':
-      eclCall = 'blockchainScripthash_listunspent';
-      oneparam();
-      break;
-    case 'broadcast':
-      eclCall = 'blockchainTransaction_broadcast';
-      oneparam();
-      break;
-    case 'height':
-      eclCall = 'blockchainHeaders_subscribe';
-      zeroparam();
-      break;
-    case 'header':
-      eclCall = 'blockchainBlock_getHeader';
-      oneparam();
-      break;
-    case 'nicehistory':
-      nicehistory(1);
-      break;
-    case 'niceentirehistory':
-      nicehistory(30000);
-      break;
-    case 'niceutxo':
-      niceutxo();
-      break;
   }
 
   function oneparam(limitHistory) {
@@ -167,13 +117,13 @@ app.use((req, res, next) => {
             res.end();
           } else {
             ecl.close();
-            var verString = JSON.stringify(ver);
+            const verString = JSON.stringify(ver);
             res.write(verString);
             res.end();
           }
         } else {
           ecl.close();
-          var verString = JSON.stringify(ver);
+          const verString = JSON.stringify(ver);
           res.write(verString);
           res.end();
         }
@@ -271,7 +221,7 @@ app.use((req, res, next) => {
             };
             // console.log(tx)
             // console.log(result);
-            const insFetching = new Promise((resolve, reject) => {
+            const insFetching = new Promise((resolve) => {
               tx.ins.forEach((input, index, array) => {
                 const myvin = {
                   txid: !input.hash.reverse
@@ -353,7 +303,9 @@ app.use((req, res, next) => {
 
             insFetching.then(() => {
               responseB[j].vout.forEach((vout) => {
+                // eslint-disable-next-line no-param-reassign
                 vout.satoshi = vout.value * 1e8;
+                // eslint-disable-next-line no-param-reassign
                 vout.valueSat = vout.value * 1e8;
                 result.valueOutSat += (vout.value * 1e8);
                 result.fees -= (vout.value * 1e8);
@@ -425,6 +377,59 @@ app.use((req, res, next) => {
       res.write(`Error: ${e.message}`);
       res.end();
     }
+  }
+
+  // eslint-disable-next-line default-case
+  switch (call) {
+    case 'balance':
+      eclCall = 'blockchainScripthash_getBalance';
+      oneparam();
+      break;
+    case 'history':
+      eclCall = 'blockchainScripthash_getHistory';
+      oneparam(true);
+      break;
+    case 'entirehistory':
+      eclCall = 'blockchainScripthash_getHistory';
+      oneparam(false);
+      break;
+    case 'transaction':
+      eclCall = 'blockchainTransaction_get';
+      oneparam();
+      break;
+    case 'transactionnonverbose':
+      eclCall = 'blockchainTransaction_get_nonverbose';
+      oneparam();
+      break;
+    case 'transactionverbose':
+      eclCall = 'blockchainTransaction_get_verbose';
+      oneparam();
+      break;
+    case 'utxo':
+      eclCall = 'blockchainScripthash_listunspent';
+      oneparam();
+      break;
+    case 'broadcast':
+      eclCall = 'blockchainTransaction_broadcast';
+      oneparam();
+      break;
+    case 'height':
+      eclCall = 'blockchainHeaders_subscribe';
+      zeroparam();
+      break;
+    case 'header':
+      eclCall = 'blockchainBlock_getHeader';
+      oneparam();
+      break;
+    case 'nicehistory':
+      nicehistory(1);
+      break;
+    case 'niceentirehistory':
+      nicehistory(30000);
+      break;
+    case 'niceutxo':
+      niceutxo();
+      break;
   }
 });
 

@@ -26,7 +26,7 @@ module.exports = {
       'error',
       'unix',
     ],
-    'prefer-destructuring': false,
+    'prefer-destructuring': 'off',
   },
   parserOptions: {
     parser: 'babel-eslint',
