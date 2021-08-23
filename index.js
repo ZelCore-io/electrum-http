@@ -77,90 +77,83 @@ app.use((req, res) => {
     }
   }
 
-  function oneparam(limitHistory) {
-    const main = async () => {
-      const ecl = new ElectrumCli(conPort, server, conType);
-      await ecl.connect()
-        .catch((error) => {
-          console.log(error);
-          res.write(JSON.stringify(error));
-          res.end();
-        }); // connect(promise)
-      try {
-        if (call === 'balance' || call === 'history' || call === 'entirehistory' || call === 'utxo') {
-          const paramBuffer = bitgotx.address.toOutputScript(
-            param,
-            network,
-          );
-          const scriptHash = bitgotx.crypto.sha256(paramBuffer).reverse().toString('hex');
-          console.log(scriptHash);
-          param = scriptHash;
-          console.log(bitgotx.address.fromOutputScript(paramBuffer, network));
-        }
-        const ver = await ecl[eclCall](
+  async function oneparam(limitHistory) {
+    const ecl = new ElectrumCli(conPort, server, conType);
+    await ecl.connect()
+      .catch((error) => {
+        console.log(error);
+        res.write(JSON.stringify(error));
+        res.end();
+      }); // connect(promise)
+    try {
+      if (call === 'balance' || call === 'history' || call === 'entirehistory' || call === 'utxo') {
+        const paramBuffer = bitgotx.address.toOutputScript(
           param,
-        ); // json-rpc(promise)
+          network,
+        );
+        const scriptHash = bitgotx.crypto.sha256(paramBuffer).reverse().toString('hex');
+        console.log(scriptHash);
+        param = scriptHash;
+        console.log(bitgotx.address.fromOutputScript(paramBuffer, network));
+      }
+      const ver = await ecl[eclCall](
+        param,
+      ); // json-rpc(promise)
         // console.log(ver)
-        if (eclCall === 'blockchainScripthash_listunspent') {
+      if (eclCall === 'blockchainScripthash_listunspent') {
+        ecl.close();
+        const slicedArray = ver.slice(0, 600);
+        const verString = JSON.stringify(slicedArray);
+        res.write(verString);
+        res.end();
+      } else if (eclCall === 'blockchainScripthash_getHistory' && limitHistory) {
+        if (ver.length > 200) {
           ecl.close();
-          const slicedArray = ver.slice(0, 600);
+          const { length } = ver;
+          const slicedArray = ver.slice(length - 100, length);
           const verString = JSON.stringify(slicedArray);
           res.write(verString);
           res.end();
-        } else if (eclCall === 'blockchainScripthash_getHistory' && limitHistory) {
-          if (ver.length > 200) {
-            ecl.close();
-            const { length } = ver;
-            const slicedArray = ver.slice(length - 100, length);
-            const verString = JSON.stringify(slicedArray);
-            res.write(verString);
-            res.end();
-          } else {
-            ecl.close();
-            const verString = JSON.stringify(ver);
-            res.write(verString);
-            res.end();
-          }
         } else {
           ecl.close();
           const verString = JSON.stringify(ver);
           res.write(verString);
           res.end();
         }
-      } catch (e) {
-        ecl.close();
-        res.write(`Error: ${e.message}`);
-        res.end();
-      }
-    };
-    main();
-  }
-
-  function zeroparam() {
-    const main = async () => {
-      const ecl = new ElectrumCli(conPort, server, conType);
-      await ecl.connect()
-        .catch((error) => {
-          console.log(error);
-          res.write(JSON.stringify(error));
-          res.end();
-        }); // connect(promise)
-      try {
-        const ver = await ecl[eclCall](
-        ); // json-rpc(promise)
-        // console.log(ver)
+      } else {
         ecl.close();
         const verString = JSON.stringify(ver);
         res.write(verString);
         res.end();
-      } catch (e) {
-        ecl.close();
-        console.log(e);
-        res.write(`Error: ${e.message}`);
-        res.end();
       }
-    };
-    main();
+    } catch (e) {
+      ecl.close();
+      res.write(`Error: ${e.message}`);
+      res.end();
+    }
+  }
+
+  async function zeroparam() {
+    const ecl = new ElectrumCli(conPort, server, conType);
+    await ecl.connect()
+      .catch((error) => {
+        console.log(error);
+        res.write(JSON.stringify(error));
+        res.end();
+      }); // connect(promise)
+    try {
+      const ver = await ecl[eclCall](); // json-rpc(promise)
+      // console.log(ver)
+      ecl.close();
+      const verString = JSON.stringify(ver);
+      res.write(verString);
+      res.end();
+    } catch (e) {
+      ecl.close();
+      console.log(e);
+      res.write(`Error: ${e.message}`);
+      res.end();
+    }
   }
 
   async function nicehistory(amountoftxs) {
