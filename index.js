@@ -212,6 +212,7 @@ app.use((req, res) => {
               valueOutSat: 0,
               fees: 0,
               height: txHeight,
+              hex: responseB[j].hex || '0x',
             };
             // console.log(tx);
             // console.log(result);
