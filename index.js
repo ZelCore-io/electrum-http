@@ -195,142 +195,146 @@ app.use((req, res) => {
       // console.log(txUrls);
       const txsPromise = txUrls.map((l) => ecl.blockchainTransaction_get_verbose(l));
       const multiplier = 1 + Math.round(limit / 100);
-      Promise.all(txsPromise, { timeout: 30000 * multiplier })
-        .then((responseB) => {
-          for (let j = 0; j < limit; j += 1) {
-            const txHeight = ver[j].height;
-            const rawtx = responseB[j].hex;
-            const tx = bitgotx.Transaction.fromHex(rawtx, network);
-            const result = {
-              txid: responseB[j].txid,
-              version: responseB[j].version,
-              locktime: responseB[j].locktime,
-              vin: [],
-              vout: [],
-              time: responseB[j].time || currentTimestamp,
-              confirmations: responseB[j].confirmations || 0,
-              valueInSat: 0,
-              valueOutSat: 0,
-              fees: 0,
-              height: txHeight,
-              hex: responseB[j].hex || undefined,
-            };
-            // console.log(tx);
-            // console.log(result);
-            const insFetching = new Promise((resolve) => {
-              tx.ins.forEach((input, index, array) => {
-                const myvin = {
-                  txid: !input.hash.reverse
-                    ? input.hash
-                    : input.hash.reverse().toString('hex'),
-                  n: input.index,
-                  script: bitgotx.script.toASM(input.script),
-                  sequence: input.sequence,
-                  scriptSig: {
-                    hex: input.script.toString('hex'),
-                    asm: bitgotx.script.toASM(input.script),
-                  },
-                  addr: '',
-                  value: 0,
-                  valueSat: 0,
-                  satoshis: 0,
-                };
-                if (!myvin.txid.includes('00000000000000000000000000000')) {
-                  ecl.blockchainTransaction_get_nonverbose(myvin.txid)
-                    .then((responseInput) => {
-                      if (coin === 'raptoreum' && responseInput.includes('03000500010000000000000000000000000000000000000000000000000000000000000000ff')) {
-                        if (index === array.length - 1) {
-                          setTimeout(() => {
-                            resolve();
-                          }, 888);
-                        }
-                        return;
-                      }
-                      const inputRes = responseInput;
-                      // console.log(myvin.txid);
-                      // console.log(inputRes);
-                      const vintx = bitgotx.Transaction.fromHex(inputRes, network);
-                      const vinOutTx = vintx.outs[myvin.n];
-                      myvin.valueSat = vinOutTx.value;
-                      myvin.satoshis = vinOutTx.value;
-                      myvin.value = (1e-8 * vinOutTx.value);
-                      result.valueInSat += vinOutTx.value;
-                      result.fees += vinOutTx.value;
-                      const type = bitgotx.script.classifyOutput(vinOutTx.script);
-                      let pubKeyBuffer;
-                      switch (type) {
-                        case 'pubkeyhash':
-                          myvin.addr = bitgotx.address.fromOutputScript(
-                            vinOutTx.script,
-                            network,
-                          );
-                          break;
-                        case 'pubkey':
-                          try {
-                            pubKeyBuffer = Buffer.from(
-                              myvin.scriptSig.asm.split(' ')[0],
-                              'hex',
-                            );
-                            myvin.addr = bitgotx.ECPair.fromPublicKeyBuffer(
-                              pubKeyBuffer,
-                              network,
-                            ).getAddress();
-                          } catch (error) {
-                            console.log(error);
+      let txsSmall = txsPromise.splice(0, 10);
+      while (txsSmall.length) {
+        await Promise.all(txsSmall, { timeout: 30000 * multiplier })
+          .then((responseB) => {
+            for (let j = 0; j < limit; j += 1) {
+              const txHeight = ver[j].height;
+              const rawtx = responseB[j].hex;
+              const tx = bitgotx.Transaction.fromHex(rawtx, network);
+              const result = {
+                txid: responseB[j].txid,
+                version: responseB[j].version,
+                locktime: responseB[j].locktime,
+                vin: [],
+                vout: [],
+                time: responseB[j].time || currentTimestamp,
+                confirmations: responseB[j].confirmations || 0,
+                valueInSat: 0,
+                valueOutSat: 0,
+                fees: 0,
+                height: txHeight,
+                hex: responseB[j].hex || undefined,
+              };
+              // console.log(tx);
+              // console.log(result);
+              const insFetching = new Promise((resolve) => {
+                tx.ins.forEach((input, index, array) => {
+                  const myvin = {
+                    txid: !input.hash.reverse
+                      ? input.hash
+                      : input.hash.reverse().toString('hex'),
+                    n: input.index,
+                    script: bitgotx.script.toASM(input.script),
+                    sequence: input.sequence,
+                    scriptSig: {
+                      hex: input.script.toString('hex'),
+                      asm: bitgotx.script.toASM(input.script),
+                    },
+                    addr: '',
+                    value: 0,
+                    valueSat: 0,
+                    satoshis: 0,
+                  };
+                  if (!myvin.txid.includes('00000000000000000000000000000')) {
+                    ecl.blockchainTransaction_get_nonverbose(myvin.txid)
+                      .then((responseInput) => {
+                        if (coin === 'raptoreum' && responseInput.includes('03000500010000000000000000000000000000000000000000000000000000000000000000ff')) {
+                          if (index === array.length - 1) {
+                            setTimeout(() => {
+                              resolve();
+                            }, 888);
                           }
-                          break;
-                        case 'scripthash':
-                          myvin.addr = bitgotx.address.fromOutputScript(
-                            vinOutTx.script,
-                            network,
-                          );
-                          break;
-                        default:
-                          /* Do nothing */
-                          break;
-                      }
-                      result.vin.push(myvin);
-                      if (index === array.length - 1) resolve();
-                    })
-                    .catch((e) => {
-                      console.log(e);
-                      ecl.close();
-                      res.write(`Error: ${e.message}`);
-                      res.end();
-                    });
-                } else if (index === array.length - 1) {
-                  setTimeout(() => {
-                    resolve();
-                  }, 888);
-                }
+                          return;
+                        }
+                        const inputRes = responseInput;
+                        // console.log(myvin.txid);
+                        // console.log(inputRes);
+                        const vintx = bitgotx.Transaction.fromHex(inputRes, network);
+                        const vinOutTx = vintx.outs[myvin.n];
+                        myvin.valueSat = vinOutTx.value;
+                        myvin.satoshis = vinOutTx.value;
+                        myvin.value = (1e-8 * vinOutTx.value);
+                        result.valueInSat += vinOutTx.value;
+                        result.fees += vinOutTx.value;
+                        const type = bitgotx.script.classifyOutput(vinOutTx.script);
+                        let pubKeyBuffer;
+                        switch (type) {
+                          case 'pubkeyhash':
+                            myvin.addr = bitgotx.address.fromOutputScript(
+                              vinOutTx.script,
+                              network,
+                            );
+                            break;
+                          case 'pubkey':
+                            try {
+                              pubKeyBuffer = Buffer.from(
+                                myvin.scriptSig.asm.split(' ')[0],
+                                'hex',
+                              );
+                              myvin.addr = bitgotx.ECPair.fromPublicKeyBuffer(
+                                pubKeyBuffer,
+                                network,
+                              ).getAddress();
+                            } catch (error) {
+                              console.log(error);
+                            }
+                            break;
+                          case 'scripthash':
+                            myvin.addr = bitgotx.address.fromOutputScript(
+                              vinOutTx.script,
+                              network,
+                            );
+                            break;
+                          default:
+                            /* Do nothing */
+                            break;
+                        }
+                        result.vin.push(myvin);
+                        if (index === array.length - 1) resolve();
+                      })
+                      .catch((e) => {
+                        console.log(e);
+                        ecl.close();
+                        res.write(`Error: ${e.message}`);
+                        res.end();
+                      });
+                  } else if (index === array.length - 1) {
+                    setTimeout(() => {
+                      resolve();
+                    }, 888);
+                  }
+                });
               });
-            });
 
-            insFetching.then(() => {
-              responseB[j].vout.forEach((vout) => {
-                // eslint-disable-next-line no-param-reassign
-                vout.satoshi = vout.value * 1e8;
-                // eslint-disable-next-line no-param-reassign
-                vout.valueSat = vout.value * 1e8;
-                result.valueOutSat += (vout.value * 1e8);
-                result.fees -= (vout.value * 1e8);
-                result.vout.push(vout);
+              insFetching.then(() => {
+                responseB[j].vout.forEach((vout) => {
+                  // eslint-disable-next-line no-param-reassign
+                  vout.satoshi = vout.value * 1e8;
+                  // eslint-disable-next-line no-param-reassign
+                  vout.valueSat = vout.value * 1e8;
+                  result.valueOutSat += (vout.value * 1e8);
+                  result.fees -= (vout.value * 1e8);
+                  result.vout.push(vout);
+                });
+                lightTransactions.push(result);
               });
-              lightTransactions.push(result);
-              if (lightTransactions.length === limit) {
-                ecl.close();
-                res.write(JSON.stringify(lightTransactions));
-                res.end();
-              }
-            });
-          }
-        })
-        .catch((e) => {
-          ecl.close();
-          console.log(e);
-          res.write(`Error: ${e.message}`);
-          res.end();
-        });
+            }
+          })
+          .catch((e) => {
+            ecl.close();
+            console.log(e);
+            res.write(`Error: ${e.message}`);
+            res.end();
+          });
+        txsSmall = txsPromise.splice(0, 10);
+      }
+      if (lightTransactions.length === limit) {
+        ecl.close();
+        res.write(JSON.stringify(lightTransactions));
+        res.end();
+      }
     } catch (e) {
       ecl.close();
       res.write(`Error: ${e.message}`);
