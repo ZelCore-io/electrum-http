@@ -99,7 +99,7 @@ app.use((req, res) => {
       const ver = await ecl[eclCall](
         param,
       ); // json-rpc(promise)
-        // console.log(ver)
+      // console.log(ver)
       if (eclCall === 'blockchainScripthash_listunspent') {
         ecl.close();
         const slicedArray = ver.slice(0, 600);
@@ -426,10 +426,10 @@ app.use((req, res) => {
       oneparam();
       break;
     case 'nicehistory':
-      nicehistory(30);
+      nicehistory(31);
       break;
     case 'niceentirehistory':
-      nicehistory(30000);
+      nicehistory(30001);
       break;
     case 'niceutxo':
       niceutxo();
