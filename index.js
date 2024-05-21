@@ -199,7 +199,7 @@ app.use((req, res) => {
       while (txsSmall.length) {
         await Promise.all(txsSmall, { timeout: 30000 * multiplier })
           .then((responseB) => {
-            for (let j = 0; j < limit; j += 1) {
+            for (let j = lightTransactions.length; j < txsSmall.length; j += 1) {
               const txHeight = ver[j].height;
               const rawtx = responseB[j].hex;
               const tx = bitgotx.Transaction.fromHex(rawtx, network);
