@@ -194,12 +194,11 @@ app.use((req, res) => {
       }
       // console.log(txUrls);
       const txsPromise = txUrls.map((l) => ecl.blockchainTransaction_get_verbose(l));
-      const multiplier = 1 + Math.round(limit / 100);
       let txsSmall = txsPromise.splice(0, 10);
       while (txsSmall.length) {
-        await Promise.all(txsSmall, { timeout: 30000 * multiplier })
+        await Promise.all(txsSmall, { timeout: 30000})
           .then((responseB) => {
-            for (let j = lightTransactions.length; j < txsSmall.length; j += 1) {
+            for (let j = lightTransactions.length; j < lightTransactions.length + txsSmall.length; j += 1) {
               const txHeight = ver[j].height;
               const rawtx = responseB[j].hex;
               const tx = bitgotx.Transaction.fromHex(rawtx, network);
