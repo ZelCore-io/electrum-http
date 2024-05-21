@@ -99,7 +99,7 @@ app.use((req, res) => {
       const ver = await ecl[eclCall](
         param,
       ); // json-rpc(promise)
-        // console.log(ver)
+      // console.log(ver)
       if (eclCall === 'blockchainScripthash_listunspent') {
         ecl.close();
         const slicedArray = ver.slice(0, 600);
@@ -194,7 +194,8 @@ app.use((req, res) => {
       }
       // console.log(txUrls);
       const txsPromise = txUrls.map((l) => ecl.blockchainTransaction_get_verbose(l));
-      Promise.all(txsPromise, { timeout: 30000 })
+      const multiplier = 1 + Math.round(limit / 100);
+      Promise.all(txsPromise, { timeout: 30000 * multiplier })
         .then((responseB) => {
           for (let j = 0; j < limit; j += 1) {
             const txHeight = ver[j].height;
@@ -426,10 +427,10 @@ app.use((req, res) => {
       oneparam();
       break;
     case 'nicehistory':
-      nicehistory(30);
+      nicehistory(31);
       break;
     case 'niceentirehistory':
-      nicehistory(30000);
+      nicehistory(30001);
       break;
     case 'niceutxo':
       niceutxo();
