@@ -194,12 +194,13 @@ app.use((req, res) => {
       }
       // console.log(txUrls);
       const txsPromise = txUrls.map((l) => ecl.blockchainTransaction_get_verbose(l));
-      let txsSmall = txsPromise.splice(0, 10);
+      let txsSmall = txsPromise.splice(0, 30);
       while (txsSmall.length) {
-        await Promise.all(txsSmall, { timeout: 30000})
-          .then((responseB) => {
-            for (let j = lightTransactions.length; j < lightTransactions.length + txsSmall.length; j += 1) {
-              const txHeight = ver[j].height;
+        await Promise.all(txsSmall, { timeout: 30000 })
+          .then(async (responseB) => {
+            for (let j = 0; j < txsSmall.length; j += 1) {
+              console.log(j);
+              const txHeight = ver[j + lightTransactions.length].height;
               const rawtx = responseB[j].hex;
               const tx = bitgotx.Transaction.fromHex(rawtx, network);
               const result = {
@@ -295,9 +296,6 @@ app.use((req, res) => {
                       })
                       .catch((e) => {
                         console.log(e);
-                        ecl.close();
-                        res.write(`Error: ${e.message}`);
-                        res.end();
                       });
                   } else if (index === array.length - 1) {
                     setTimeout(() => {
@@ -306,19 +304,17 @@ app.use((req, res) => {
                   }
                 });
               });
-
-              insFetching.then(() => {
-                responseB[j].vout.forEach((vout) => {
-                  // eslint-disable-next-line no-param-reassign
-                  vout.satoshi = vout.value * 1e8;
-                  // eslint-disable-next-line no-param-reassign
-                  vout.valueSat = vout.value * 1e8;
-                  result.valueOutSat += (vout.value * 1e8);
-                  result.fees -= (vout.value * 1e8);
-                  result.vout.push(vout);
-                });
-                lightTransactions.push(result);
+              await insFetching;
+              responseB[j].vout.forEach((vout) => {
+                // eslint-disable-next-line no-param-reassign
+                vout.satoshi = vout.value * 1e8;
+                // eslint-disable-next-line no-param-reassign
+                vout.valueSat = vout.value * 1e8;
+                result.valueOutSat += (vout.value * 1e8);
+                result.fees -= (vout.value * 1e8);
+                result.vout.push(vout);
               });
+              lightTransactions.push(result);
             }
           })
           .catch((e) => {
@@ -327,13 +323,11 @@ app.use((req, res) => {
             res.write(`Error: ${e.message}`);
             res.end();
           });
-        txsSmall = txsPromise.splice(0, 10);
+        txsSmall = txsPromise.splice(0, 30);
       }
-      if (lightTransactions.length === limit) {
-        ecl.close();
-        res.write(JSON.stringify(lightTransactions));
-        res.end();
-      }
+      res.write(JSON.stringify(lightTransactions));
+      res.end();
+      ecl.close();
     } catch (e) {
       ecl.close();
       res.write(`Error: ${e.message}`);
