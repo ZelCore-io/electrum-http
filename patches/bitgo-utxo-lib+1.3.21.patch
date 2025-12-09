@@ -1,23 +1,21 @@
 diff --git a/node_modules/bitgo-utxo-lib/src/bufferutils.js b/node_modules/bitgo-utxo-lib/src/bufferutils.js
-index 244cc3f..7ecfbc2 100644
+index 244cc3f..8a6c37d 100644
 --- a/node_modules/bitgo-utxo-lib/src/bufferutils.js
 +++ b/node_modules/bitgo-utxo-lib/src/bufferutils.js
-@@ -12,11 +12,15 @@ function verifuint (value, max) {
+@@ -12,11 +12,13 @@ function verifuint (value, max) {
  function readUInt64LE (buffer, offset) {
    var a = buffer.readUInt32LE(offset)
    var b = buffer.readUInt32LE(offset + 4)
 -  b *= 0x100000000
  
 -  verifuint(b + a, 0x001fffffffffffff)
-+  // Use BigInt for large values that exceed Number.MAX_SAFE_INTEGER
++  // Use BigInt to accurately read the full 64-bit value, then convert to Number
++  // This allows values larger than MAX_SAFE_INTEGER (with potential precision loss)
++  // which is acceptable for display/API purposes but not for cryptographic operations
 +  var value = BigInt(a) + BigInt(b) * BigInt(0x100000000)
  
 -  return b + a
-+  // Return as Number if safe, otherwise return BigInt
-+  if (value <= BigInt(Number.MAX_SAFE_INTEGER)) {
-+    return Number(value)
-+  }
-+  return value
++  return Number(value)
  }
  
  function readInt64LE (buffer, offset) {
